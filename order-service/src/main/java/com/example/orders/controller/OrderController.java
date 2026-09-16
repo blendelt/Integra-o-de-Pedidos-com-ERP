@@ -2,6 +2,8 @@ package com.example.orders.controller;
 
 import com.example.orders.dto.CreateOrderRequest;
 import com.example.orders.dto.OrderResponse;
+import com.example.orders.dto.ProcessingResult;
+import com.example.orders.processor.OrderProcessor;
 import com.example.orders.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,11 +21,17 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderProcessor orderProcessor;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService, OrderProcessor orderProcessor) {
         this.orderService = orderService;
+        this.orderProcessor = orderProcessor;
     }
 
+    @PostMapping("/process")
+    public ProcessingResult process() {
+        return orderProcessor.processPending();
+    }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
