@@ -19,18 +19,40 @@
 - [x] Simulação de atraso configurável e falha determinística
 - [x] Endpoint de saúde do ERP
 
-### Ainda não implementado
+### Etapas e situação atual
 
 - [x] ERP Service
 - [x] Cliente HTTP do ERP no Order Service
 - [x] Processamento manual e agendado (paralelo por lote; validação descrita em `PARALLEL_PROCESSING.md`)
-- [x] Processamento paralelo com limite de concorrência (testes adicionados; execução pendente)
-- [x] Proteção contra duas execuções processarem o mesmo pedido (reserva transacional implementada; execução do teste PostgreSQL pendente)
-- [ ] Timeout e tratamento de falha do ERP
-- [ ] Frontend Angular
-- [ ] Dockerfiles e Docker Compose
-- [ ] Testes relevantes
-- [ ] README final e roteiro do vídeo
+- [x] Processamento paralelo com limite de concorrência (testes executados pelo usuário e aprovados)
+- [x] Proteção contra duas execuções processarem o mesmo pedido (reserva transacional e testes PostgreSQL validados)
+- [x] Timeout e tratamento de falha do ERP (categorias seguras e testes aprovados)
+- [x] Frontend Angular (build concluído, 5 testes aprovados e fluxo visual validado)
+- [ ] Dockerfiles e Docker Compose (arquivos criados e configuração validada; build e execução em containers pendentes)
+- [x] Testes automatizados atuais dos serviços e frontend (execução local confirmada pelo usuário)
+- [x] README principal e roteiro do vídeo criados (`README.md` e `VIDEO_GUIDE.md`)
+- [ ] Gravar vídeo com tela e rosto e disponibilizar link aos avaliadores
+
+## Validação registrada em 17/09/2026
+
+- [x] Testes do Order Service e ERP Service: execução local e aprovação confirmadas pelo usuário.
+- [x] Build Angular: concluído em 2,431 segundos; saída em `frontend/dist/frontend`.
+- [x] Testes Angular: 1 arquivo e 5 testes aprovados, conforme saída enviada pelo usuário.
+- [x] Validação pela tela: pedido de teste #3 falhou, teve identificador, cliente e valor corrigidos, voltou a PENDING e terminou SUCCESS com 2 tentativas e o mesmo ID interno.
+- [x] Confirmado bloqueio de reenvio sem marcar a confirmação de não integração no ERP.
+
+Avisos não bloqueantes do build: `app.css` atingiu 4,87 kB, 868 bytes acima do limite de aviso de 4 kB; Node 25.6.0 emitiu recomendação de uso de uma versão LTS. Esses avisos não impediram o build nem os testes. A execução automatizada pelo agente ficou limitada por permissões locais; a aprovação dos comandos completos foi confirmada pelo usuário em seu terminal.
+
+### Edição e reprocessamento concluídos
+
+- [x] Permitir edição somente de pedidos em ERROR.
+- [x] Validar versão e bloquear a linha na transação para rejeitar edições concorrentes desatualizadas.
+- [x] Preservar ID interno e contador de tentativas ao reenfileirar.
+- [x] Validar unicidade do identificador externo corrigido.
+- [x] Adicionar testes de reprocessamento no backend e no frontend.
+- [x] Proteger o simulador ERP contra repetição do mesmo identificador aceito durante sua execução.
+
+Detalhes e roteiro: `REPROCESSING.md`. A deduplicação do simulador é em memória e não sobrevive a reinícios. A confirmação manual não substitui reconciliação automática com o ERP.
 
 ## Decisões principais
 
@@ -55,7 +77,7 @@
 
 - Configurar timeout de conexão e de resposta no cliente HTTP.
 - Registrar número de tentativas e última mensagem de erro protegida.
-- Nesta primeira versão, não fazer retry automático. O pedido com erro poderá ser processado novamente por uma operação explícita futura.
+- Nesta primeira versão, não fazer retry automático. O pedido com erro pode ser corrigido e reenfileirado explicitamente por `POST /orders/{id}/retry`, após confirmação de que não foi integrado no ERP.
 - O ERP Service terá falha determinística para testes e uma taxa aleatória opcional configurável.
 
 ## Fases de implementação
@@ -66,7 +88,7 @@
 - [x] Adicionar métodos de domínio para iniciar, concluir e falhar o processamento
 - [ ] Revisar respostas e códigos HTTP
 - [ ] Adicionar logs com identificador do pedido, sem registrar dados sensíveis
-- [ ] Configurar CORS apenas para desenvolvimento, caso não seja usado proxy no frontend
+- [x] Usar proxy Angular em desenvolvimento para acessar o Order Service
 
 Critério de conclusão:
 
@@ -93,7 +115,7 @@ Critério de conclusão:
 
 - [x] Criar `ErpClient`
 - [x] Configurar timeouts
-- [x] Criar consulta para reservar pedidos com bloqueio concorrente (teste real de concorrência pendente)
+- [x] Criar consulta para reservar pedidos com bloqueio concorrente (testes PostgreSQL aprovados)
 - [x] Criar `OrderProcessor`
 - [x] Configurar executor com limite de paralelismo
 - [x] Implementar `POST /orders/process`
@@ -109,14 +131,14 @@ Critério de conclusão:
 
 ### Fase 4 — Criar o frontend Angular
 
-- [ ] Criar projeto Angular
-- [ ] Criar modelo e service HTTP de pedidos
-- [ ] Criar formulário de cadastro com validação
-- [ ] Criar tabela de pedidos
-- [ ] Criar botão para processar pedidos pendentes
-- [ ] Criar atualização manual da listagem
-- [ ] Exibir carregamento, sucesso e erros
-- [ ] Fazer atualização periódica enquanto houver pedidos em processamento
+- [x] Criar projeto Angular
+- [x] Criar modelo e service HTTP de pedidos
+- [x] Criar formulário de cadastro com validação
+- [x] Criar tabela de pedidos
+- [x] Criar botão para processar pedidos pendentes
+- [x] Criar atualização manual da listagem
+- [x] Exibir carregamento, sucesso e erros
+- [x] Atualizar a listagem a cada 5 segundos
 
 Critério de conclusão:
 
@@ -128,12 +150,12 @@ Critério de conclusão:
 
 ### Fase 5 — Docker
 
-- [ ] Dockerfile do Order Service
-- [ ] Dockerfile do ERP Service
-- [ ] Dockerfile do frontend com Nginx
-- [ ] `docker-compose.yml` com os quatro containers
-- [ ] Variáveis de ambiente para URLs, banco, paralelismo e simulação de falhas
-- [ ] Healthchecks e dependências de inicialização
+- [x] Dockerfile do Order Service
+- [x] Dockerfile do ERP Service
+- [x] Dockerfile do frontend com Nginx
+- [x] `compose.yaml` com os quatro containers
+- [x] Variáveis de ambiente para URLs, banco, paralelismo e simulação de falhas
+- [x] Healthchecks e dependências de inicialização
 
 Critério de conclusão:
 
@@ -147,24 +169,24 @@ Critério de conclusão:
 #### Order Service
 
 - [ ] Teste de criação de pedido válido
-- [ ] Teste de validação dos campos
-- [ ] Teste de `externalId` duplicado
-- [ ] Teste dos métodos de mudança de status
-- [ ] Teste de sucesso na integração
-- [ ] Teste de erro na integração
-- [ ] Teste de concorrência com duas chamadas de processamento
+- [x] Teste de validação dos campos
+- [x] Teste de `externalId` duplicado
+- [x] Teste dos métodos de mudança de status
+- [x] Teste de sucesso na integração
+- [x] Teste de erro na integração
+- [x] Teste de concorrência com duas chamadas de processamento
 
 #### ERP Service
 
 - [ ] Teste do atraso configurado sem depender de tempo aleatório
-- [ ] Teste da resposta de sucesso
-- [ ] Teste da falha determinística
+- [x] Teste da resposta de sucesso
+- [x] Teste da falha determinística
 
 #### Frontend
 
-- [ ] Teste do formulário e validações
-- [ ] Teste do service HTTP
-- [ ] Teste dos estados de carregamento e erro
+- [x] Teste do formulário e validações
+- [x] Validar chamadas HTTP do frontend com HttpTestingController nos testes do componente
+- [x] Teste dos estados de carregamento e erro
 
 #### Aplicação completa
 
@@ -175,7 +197,14 @@ Critério de conclusão:
 - [ ] Disparar duas chamadas de processamento simultâneas
 - [ ] Confirmar que nenhum pedido foi enviado duas vezes simultaneamente
 
-## Ordem de trabalho
+## Próximos passos pendentes
+
+1. Concluir revisões e cenários específicos ainda desmarcados nas fases 1 e 6.
+2. Construir e subir os quatro containers conforme `DOCKER.md`; arquivos e validação estática concluídos.
+3. Validar a aplicação completa em containers, incluindo concorrência e persistência.
+4. Gravar o vídeo com base em `VIDEO_GUIDE.md`, revisar a documentação após validar Docker e publicar a entrega.
+
+## Ordem de trabalho original
 
 1. Concluir a Fase 1 e testar o cadastro.
 2. Criar e testar isoladamente o ERP Service.
