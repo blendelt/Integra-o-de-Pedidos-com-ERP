@@ -1,13 +1,12 @@
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: order-integration-postgres
     environment:
       POSTGRES_DB: orders
       POSTGRES_USER: orders
-      POSTGRES_PASSWORD: orders
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-orders}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +14,58 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  erp-service:
+    build: ./erp-service
+    environment:
+      ERP_MINIMUM_DELAY_MS: ${ERP_MINIMUM_DELAY_MS:-500}
+      ERP_MAXIMUM_DELAY_MS: ${ERP_MAXIMUM_DELAY_MS:-2000}
+      ERP_FAILURE_PREFIX: ${ERP_FAILURE_PREFIX:-FAIL-}
+      ERP_RANDOM_FAILURE_RATE: ${ERP_RANDOM_FAILURE_RATE:-0.0}
+    ports:
+      - "127.0.0.1:${ERP_PORT:-18081}:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  order-service:
+    build: ./order-service
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/orders
+      DB_USERNAME: orders
+      DB_PASSWORD: ${DB_PASSWORD:-orders}
+      ERP_BASE_URL: http://erp-service:8081
+      ERP_CONNECT_TIMEOUT: ${ERP_CONNECT_TIMEOUT:-2s}
+      ERP_READ_TIMEOUT: ${ERP_READ_TIMEOUT:-3s}
+      ORDER_PROCESSING_WORKERS: ${ORDER_PROCESSING_WORKERS:-4}
+      ORDER_PROCESSING_BATCH_SIZE: ${ORDER_PROCESSING_BATCH_SIZE:-20}
+      ORDER_PROCESSING_SCHEDULING_ENABLED: ${ORDER_PROCESSING_SCHEDULING_ENABLED:-true}
+      ORDER_PROCESSING_FIXED_DELAY: ${ORDER_PROCESSING_FIXED_DELAY:-60000}
+      ORDER_PROCESSING_INITIAL_DELAY: ${ORDER_PROCESSING_INITIAL_DELAY:-60000}
+    ports:
+      - "127.0.0.1:${ORDER_PORT:-18080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      erp-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost:8080/orders"]
+      interval: 30s
+      timeout: 5s
+      retries: 10
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8088}:80"
+    depends_on:
+      order-service:
+        condition: service_healthy
 
 volumes:
   postgres-data:
