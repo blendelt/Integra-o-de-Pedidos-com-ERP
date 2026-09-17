@@ -1,5 +1,9 @@
 package com.example.orders.controller;
 
+import org.springframework.web.bind.annotation.PathVariable;
+
+import com.example.orders.dto.RetryOrderRequest;
+
 import com.example.orders.dto.CreateOrderRequest;
 import com.example.orders.dto.OrderResponse;
 import com.example.orders.dto.ProcessingResult;
@@ -42,5 +46,11 @@ public class OrderController {
     @GetMapping
     public List<OrderResponse> findAll() {
         return orderService.findAll();
+    }
+
+    @PostMapping("/{id}/retry")
+    public OrderResponse retry(@PathVariable Long id,
+            @Valid @RequestBody RetryOrderRequest request) {
+        return orderService.retry(id, request);
     }
 }

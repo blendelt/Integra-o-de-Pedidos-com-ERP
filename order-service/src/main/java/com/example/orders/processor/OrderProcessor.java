@@ -78,7 +78,7 @@ public class OrderProcessor {
             erpClient.send(order);
         } catch (ErpClientException exception) {
             // Do not persist response bodies, customer data or arbitrary exception messages.
-            transactions.fail(order.getId(), "ERP integration failed; check service logs");
+            transactions.fail(order.getId(), exception.getFailure().safeMessage());
             LOGGER.warn("Order integration failed id={} externalId={} errorType={}",
                     order.getId(), order.getExternalId(), exception.getClass().getSimpleName());
             return new ProcessingResult(1, 0, 1);

@@ -3,6 +3,9 @@ package com.example.orders.client;
 import com.example.orders.client.dto.ErpOrderRequest;
 import com.example.orders.client.dto.ErpOrderResponse;
 import com.example.orders.entity.Order;
+import com.example.orders.enums.ErpFailure;
+import java.net.http.HttpTimeoutException;
+import java.net.SocketTimeoutException;
 import com.example.orders.exception.ErpClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,24 +48,32 @@ public class HttpErpClient implements ErpClient {
             LOGGER.warn("ERP rejected order externalId={} status={}",
                     order.getExternalId(), exception.getStatusCode().value());
             throw new ErpClientException(
-                    "ERP returned HTTP " + exception.getStatusCode().value(), exception);
+                    ErpFailure.HTTP_ERROR, "ERP returned HTTP " + exception.getStatusCode().value(), exception);
         } catch (ResourceAccessException exception) {
             LOGGER.warn("ERP unavailable for externalId={}", order.getExternalId());
-            throw new ErpClientException("ERP is unavailable or timed out", exception);
+            ErpFailure failure = isTimeout(exception) ? ErpFailure.TIMEOUT : ErpFailure.UNAVAILABLE;
+            throw new ErpClientException(failure, failure.safeMessage(), exception);
         } catch (RestClientException exception) {
-            throw new ErpClientException("ERP returned an unreadable response", exception);
+            throw new ErpClientException(ErpFailure.INVALID_RESPONSE, "ERP returned an unreadable response", exception);
         }
     }
 
     private void validateResponse(Order order, ErpOrderResponse response) {
         if (response == null) {
-            throw new ErpClientException("ERP returned an empty response");
+            throw new ErpClientException(ErpFailure.INVALID_RESPONSE, "ERP returned an empty response", null);
         }
         if (!order.getExternalId().equals(response.externalId())) {
-            throw new ErpClientException("ERP returned an unexpected externalId");
+            throw new ErpClientException(ErpFailure.INVALID_RESPONSE, "ERP returned an unexpected externalId", null);
         }
         if (!"ACCEPTED".equals(response.status())) {
-            throw new ErpClientException("ERP did not accept the order");
+            throw new ErpClientException(ErpFailure.INVALID_RESPONSE, "ERP did not accept the order", null);
         }
+    }
+
+    private boolean isTimeout(Throwable exception) {
+        for (Throwable cause = exception; cause != null; cause = cause.getCause()) {
+            if (cause instanceof HttpTimeoutException || cause instanceof SocketTimeoutException) return true;
+        }
+        return false;
     }
 }

@@ -1,5 +1,11 @@
 package com.example.erp.service;
 
+import org.springframework.http.HttpStatus;
+
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.concurrent.ConcurrentHashMap;
+
 import com.example.erp.config.ErpSimulationProperties;
 import com.example.erp.dto.ErpOrderRequest;
 import com.example.erp.dto.ErpOrderResponse;
@@ -17,12 +23,29 @@ public class ErpOrderService {
     private static final Logger LOGGER = LoggerFactory.getLogger(ErpOrderService.class);
 
     private final ErpSimulationProperties properties;
+    // Simulator-only deduplication. Production requires durable storage.
+    private final ConcurrentHashMap<String, AcceptedOrder> accepted = new ConcurrentHashMap<>();
+    private record AcceptedOrder(ErpOrderRequest request, ErpOrderResponse response) {}
 
     public ErpOrderService(ErpSimulationProperties properties) {
         this.properties = properties;
     }
 
     public ErpOrderResponse process(ErpOrderRequest request) {
+        return accepted.compute(request.externalId(), (key, previous) -> {
+            if (previous != null) {
+                if (!previous.request().customerName().equals(request.customerName())
+                        || previous.request().totalValue().compareTo(request.totalValue()) != 0) {
+                    throw new ResponseStatusException(
+                            HttpStatus.CONFLICT, "Identifier already accepted with different data");
+                }
+                return previous;
+            }
+            return new AcceptedOrder(request, accept(request));
+        }).response();
+    }
+
+    private ErpOrderResponse accept(ErpOrderRequest request) {
         simulateDelay();
 
         if (mustFail(request.externalId())) {

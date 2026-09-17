@@ -62,6 +62,18 @@ class OrderProcessorTest {
     }
 
     @Test
+    void recordsTimeoutAndContinuesNextOrder() {
+        Order first = order(1), second = order(2);
+        when(transactions.reserveNext()).thenReturn(Optional.of(first), Optional.of(second));
+        var failure = com.example.orders.enums.ErpFailure.TIMEOUT;
+        when(client.send(first)).thenThrow(new ErpClientException(failure, "private detail", null));
+        assertThat(processor.processPending()).isEqualTo(new ProcessingResult(2, 1, 1));
+        verify(transactions).fail(1L, failure.safeMessage());
+        verify(transactions).complete(2L);
+        verify(client, times(1)).send(first);
+    }
+
+    @Test
     void doesNotTurnDatabaseCompletionFailureIntoErpFailure() {
         when(transactions.reserveNext()).thenReturn(Optional.of(order(1)));
         doThrow(new IllegalStateException("database unavailable")).when(transactions).complete(1L);

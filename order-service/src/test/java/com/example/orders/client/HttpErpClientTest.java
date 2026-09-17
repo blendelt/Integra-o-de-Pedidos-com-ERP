@@ -113,6 +113,18 @@ class HttpErpClientTest {
     }
 
     @Test
+    void classifiesConnectionFailureWithoutLeakingItsMessage() {
+        server.expect(requestTo("http://erp-service:8081/erp/orders"))
+                .andRespond(request -> { throw new java.net.ConnectException("private connection detail"); });
+        assertThatThrownBy(() -> client.send(order("ERP-12345")))
+                .isInstanceOfSatisfying(ErpClientException.class, error -> {
+                    assertThat(error.getFailure()).isEqualTo(com.example.orders.enums.ErpFailure.UNAVAILABLE);
+                    assertThat(error.getFailure().safeMessage()).doesNotContain("private connection detail");
+                });
+        server.verify();
+    }
+
+    @Test
     void wrapsMalformedJsonInClientException() {
         server.expect(requestTo("http://erp-service:8081/erp/orders"))
                 .andRespond(withSuccess("{invalid", MediaType.APPLICATION_JSON));
