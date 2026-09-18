@@ -36,7 +36,7 @@ describe('Pedidos', () => {
     app.form.controls.externalId.setValue('ERP-7');
     app.create();
     http.expectNone('/orders/7/retry');
-    expect(app.actionError()).toBeTruthy();
+    expect(app.confirmationError()).toBeTruthy();
     app.confirmedNotIntegrated.set(true);
     app.create();
     const request = http.expectOne('/orders/7/retry');
@@ -66,7 +66,9 @@ describe('Pedidos', () => {
     request.flush({}, { status: 409, statusText: 'Conflict' });
     expect(app.saving()).toBe(false);
     expect(app.form.getRawValue().externalId).toBe('ERP-1');
-    expect(app.actionError()).toContain('Já existe');
+    expect(app.fieldError('externalId')).toContain('Já existe');
+    app.clearFieldError('externalId');
+    expect(app.fieldError('externalId')).toBe('');
   });
   it('impede envio duplo do lote e apresenta resumo', () => {
     const app = fixture.componentInstance;

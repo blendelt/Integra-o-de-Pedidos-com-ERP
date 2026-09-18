@@ -1,14 +1,16 @@
 <header class="topbar">
-  <a class="brand" href="/"
-    ><span class="logo">↗</span> Conecta <span class="divider">/</span> <small>Pedidos</small></a
-  ><span class="workspace">GESTÃO DE INTEGRAÇÕES</span>
+  <a class="brand" href="/" aria-label="Senior — Pedidos Integrados"
+    ><span class="logo">senior<span>▰</span></span
+    ><span class="divider">/</span><small>Pedidos Integrados</small></a
+  >
+  <span class="workspace">INTEGRAÇÃO COM ERP</span>
 </header>
 <main>
   <div class="page-heading">
     <div>
-      <p class="eyebrow">OPERAÇÃO · ERP</p>
-      <h1>Seus pedidos, conectados.</h1>
-      <p class="subtitle">Cadastre, envie e acompanhe cada integração em um só lugar.</p>
+      <p class="eyebrow">GESTÃO DE PEDIDOS</p>
+      <h1>Pedidos Integrados</h1>
+      <p class="subtitle">Do cadastro à confirmação no ERP. Acompanhe tudo por aqui.</p>
     </div>
     <span class="live">● Atualização a cada 5 segundos</span>
   </div>
@@ -51,37 +53,66 @@
           ><input
             id="externalId"
             formControlName="externalId"
+            (input)="clearFieldError('externalId')"
+            [attr.aria-invalid]="!!fieldError('externalId')"
+            aria-describedby="externalId-error"
             placeholder="Ex.: ERP-001"
             maxlength="100"
-            aria-describedby="external-help"
           /><small id="external-help">Use um identificador único por pedido.</small>
-          @if (form.controls.externalId.touched && form.controls.externalId.invalid) {
-            <p class="field-error">Informe um identificador de até 100 caracteres.</p>
-          }
+          <p class="field-error" id="externalId-error" aria-live="polite">
+            {{ fieldError('externalId') }}
+          </p>
           <label for="customerName">Cliente</label
           ><input
             id="customerName"
             formControlName="customerName"
+            (input)="clearFieldError('customerName')"
+            [attr.aria-invalid]="!!fieldError('customerName')"
+            aria-describedby="customerName-error"
             placeholder="Nome ou razão social"
             maxlength="200"
           />
-          @if (form.controls.customerName.touched && form.controls.customerName.invalid) {
-            <p class="field-error">Informe o nome do cliente.</p>
-          }
+          <p class="field-error" id="customerName-error" aria-live="polite">
+            {{ fieldError('customerName') }}
+          </p>
           <label for="totalValue">Valor total</label>
           <div class="money">
             <span>R$</span
             ><input
               id="totalValue"
               formControlName="totalValue"
+              (input)="clearFieldError('totalValue')"
+              [attr.aria-invalid]="!!fieldError('totalValue')"
+              aria-describedby="totalValue-error"
               inputmode="decimal"
               placeholder="0,00"
-              aria-describedby="value-help"
             />
           </div>
           <small id="value-help">Até 12 dígitos inteiros e 2 casas decimais.</small>
-          @if (form.controls.totalValue.touched && form.controls.totalValue.invalid) {
-            <p class="field-error">Informe um valor positivo com até duas casas decimais.</p>
+          <p class="field-error" id="totalValue-error" aria-live="polite">
+            {{ fieldError('totalValue') }}
+          </p>
+          @if (editing()) {
+            <div class="alert error">
+              Antes de alterar ou reenviar, confirme no ERP que este pedido não foi integrado.
+              Alterar o identificador de um pedido já aceito pode duplicar a operação.
+            </div>
+            <label
+              ><input
+                type="checkbox"
+                [checked]="confirmedNotIntegrated()"
+                (change)="
+                  confirmedNotIntegrated.set($any($event.target).checked); confirmationError.set('')
+                "
+                [disabled]="saving()"
+                style="width: auto"
+              />
+              Confirmei que o pedido não foi integrado no ERP.</label
+            >
+            <p class="field-error" role="alert">{{ confirmationError() }}</p>
+            <button type="button" class="secondary" (click)="cancelEdit()" [disabled]="saving()">
+              Cancelar edição
+            </button>
           }
           <button class="primary create-button" type="submit" [disabled]="saving()">
             {{ saving() ? 'Salvando…' : editing() ? 'Salvar e reenfileirar' : 'Cadastrar pedido' }}
@@ -89,25 +120,6 @@
           </button>
         </fieldset>
       </form>
-      @if (editing()) {
-        <div class="alert error">
-          Antes de alterar ou reenviar, confirme no ERP que este pedido não foi integrado. Alterar o
-          identificador de um pedido já aceito pode duplicar a operação.
-        </div>
-        <label
-          ><input
-            type="checkbox"
-            [checked]="confirmedNotIntegrated()"
-            (change)="confirmedNotIntegrated.set($any($event.target).checked)"
-            [disabled]="saving()"
-            style="width: auto"
-          />
-          Confirmei que o pedido não foi integrado no ERP.</label
-        >
-        <button type="button" class="secondary" (click)="cancelEdit()" [disabled]="saving()">
-          Cancelar edição
-        </button>
-      }
       <div class="hint">
         O pedido será cadastrado como <b>pendente</b>. O envio pode ser iniciado aqui ou pelo
         processamento automático.
@@ -205,5 +217,7 @@
       </footer>
     </section>
   </div>
-  <footer class="page-footer">CONECTA / ERP <span>Uma visão clara de cada etapa.</span></footer>
+  <footer class="page-footer">
+    Senior — Pedidos Integrados
+  </footer>
 </main>

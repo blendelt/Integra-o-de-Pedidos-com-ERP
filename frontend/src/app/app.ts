@@ -25,6 +25,8 @@ export class App {
   readonly processing = signal(false);
   readonly listError = signal('');
   readonly actionError = signal('');
+  readonly fieldErrors = signal<Record<string, string>>({});
+  readonly confirmationError = signal('');
   readonly notice = signal('');
   readonly lastRefresh = signal<Date | null>(null);
   readonly labels: Record<OrderStatus, string> = {
@@ -81,9 +83,11 @@ export class App {
     if (this.form.invalid || this.saving()) return;
     const editing = this.editing();
     if (editing && !this.confirmedNotIntegrated()) {
-      this.actionError.set('Confirme que o pedido não foi integrado no ERP antes de reenviar.');
+      this.confirmationError.set('Confirme a verificação no ERP antes de continuar.');
       return;
     }
+    this.fieldErrors.set({});
+    this.confirmationError.set('');
     this.saving.set(true);
     this.actionError.set('');
     this.notice.set('');
@@ -104,6 +108,8 @@ export class App {
       .subscribe({
         next: () => {
           this.form.reset();
+          this.fieldErrors.set({});
+          this.confirmationError.set('');
           this.editing.set(null);
           this.confirmedNotIntegrated.set(false);
           this.notice.set(
@@ -113,16 +119,33 @@ export class App {
           );
           this.refresh();
         },
-        error: (error: HttpErrorResponse) =>
-          this.actionError.set(
-            error.status === 409
-              ? editing
-                ? 'O pedido foi alterado, já está sendo processado ou o identificador está em uso. Atualize a lista.'
-                : 'Já existe um pedido com esse identificador externo.'
-              : error.status === 400
-                ? 'Confira os campos: o cadastro não foi aceito.'
-                : 'Não foi possível confirmar o cadastro. Atualize a lista antes de tentar novamente com o mesmo identificador.',
-          ),
+        error: (error: HttpErrorResponse) => {
+          if (error.status === 409 && (!editing || error.error?.code === 'DUPLICATE_EXTERNAL_ID')) {
+            this.fieldErrors.set({
+              externalId: 'Já existe um pedido com esse identificador externo.',
+            });
+          } else if (
+            error.status === 400 &&
+            error.error?.fields &&
+            Object.keys(error.error.fields).length
+          ) {
+            const fields: Record<string, string> = {};
+            for (const [key, value] of Object.entries(error.error.fields)) {
+              const name = key.replace(/^order\./, '');
+              if (['externalId', 'customerName', 'totalValue'].includes(name))
+                fields[name] = String(value);
+            }
+            this.fieldErrors.set(fields);
+            if (!Object.keys(fields).length)
+              this.actionError.set('Confira os dados e a confirmação de reenvio.');
+          } else {
+            this.actionError.set(
+              error.status === 409
+                ? 'Este pedido foi alterado. Atualize a lista e abra a edição novamente.'
+                : 'Não foi possível confirmar a operação. Atualize a lista antes de tentar novamente.',
+            );
+          }
+        },
       });
   }
   process() {
@@ -157,6 +180,8 @@ export class App {
   }
   edit(order: Order) {
     if (order.status !== 'ERROR' || this.saving()) return;
+    this.fieldErrors.set({});
+    this.confirmationError.set('');
     this.editing.set(order);
     this.confirmedNotIntegrated.set(false);
     this.actionError.set('');
@@ -170,10 +195,25 @@ export class App {
   }
   cancelEdit() {
     if (this.saving()) return;
+    this.fieldErrors.set({});
+    this.confirmationError.set('');
     this.editing.set(null);
     this.confirmedNotIntegrated.set(false);
     this.form.reset();
     this.actionError.set('');
+  }
+  clearFieldError(name: string) {
+    const errors = { ...this.fieldErrors() };
+    delete errors[name];
+    this.fieldErrors.set(errors);
+  }
+  fieldError(name: 'externalId' | 'customerName' | 'totalValue') {
+    if (this.fieldErrors()[name]) return this.fieldErrors()[name];
+    const control = this.form.controls[name];
+    if (!control.touched || !control.invalid) return '';
+    if (name === 'externalId') return 'Informe um identificador de até 100 caracteres.';
+    if (name === 'customerName') return 'Informe um nome de até 200 caracteres.';
+    return 'Informe um valor positivo, com até 12 dígitos inteiros e 2 casas decimais.';
   }
   errorMessage(order: Order) {
     if (order.lastError?.startsWith('ERP_TIMEOUT'))
