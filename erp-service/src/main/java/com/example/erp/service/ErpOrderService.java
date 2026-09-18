@@ -49,11 +49,11 @@ public class ErpOrderService {
         simulateDelay();
 
         if (mustFail(request.externalId())) {
-            LOGGER.warn("ERP simulation failed for externalId={}", request.externalId());
+            LOGGER.warn("ERP simulation failed for reference={}", org.springframework.util.DigestUtils.md5DigestAsHex(request.externalId().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
             throw new ErpProcessingException("ERP could not process order " + request.externalId());
         }
 
-        LOGGER.info("ERP simulation processed externalId={}", request.externalId());
+        LOGGER.info("ERP simulation processed reference={}", org.springframework.util.DigestUtils.md5DigestAsHex(request.externalId().getBytes(java.nio.charset.StandardCharsets.UTF_8)));
         return new ErpOrderResponse(request.externalId(), "ACCEPTED", OffsetDateTime.now());
     }
 

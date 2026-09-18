@@ -27,4 +27,19 @@ public class GlobalExceptionHandler {
                 .forEach(error -> fields.putIfAbsent(error.getField(), error.getDefaultMessage()));
         return new ApiError("VALIDATION_ERROR", "Dados do pedido inválidos", OffsetDateTime.now(), fields);
     }
+    @ExceptionHandler({org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    ApiError handleMalformedRequest(Exception exception) {
+        return new ApiError("INVALID_REQUEST", "JSON ou parâmetro inválido", OffsetDateTime.now(), Map.of());
+    }
+
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    org.springframework.http.ResponseEntity<ApiError> handleStatus(org.springframework.web.server.ResponseStatusException exception) {
+        boolean missing = exception.getStatusCode().value() == 404;
+        return org.springframework.http.ResponseEntity.status(exception.getStatusCode()).body(
+                new ApiError(missing ? "ORDER_NOT_FOUND" : "ORDER_CONFLICT",
+                        missing ? "Pedido não encontrado" : "Pedido alterado ou não elegível para reprocessamento",
+                        OffsetDateTime.now(), Map.of()));
+    }
 }

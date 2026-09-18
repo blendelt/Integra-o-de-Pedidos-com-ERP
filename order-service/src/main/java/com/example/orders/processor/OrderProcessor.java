@@ -79,13 +79,13 @@ public class OrderProcessor {
         } catch (ErpClientException exception) {
             // Do not persist response bodies, customer data or arbitrary exception messages.
             transactions.fail(order.getId(), exception.getFailure().safeMessage());
-            LOGGER.warn("Order integration failed id={} externalId={} errorType={}",
-                    order.getId(), order.getExternalId(), exception.getClass().getSimpleName());
+            LOGGER.warn("Order integration failed id={} errorType={}",
+                    order.getId(), exception.getFailure().name());
             return new ProcessingResult(1, 0, 1);
         }
         // A database failure here must not be misreported as an ERP failure.
         transactions.complete(order.getId());
-        LOGGER.info("Order integration completed id={} externalId={}", order.getId(), order.getExternalId());
+        LOGGER.info("Order integration completed id={}", order.getId());
         return new ProcessingResult(1, 1, 0);
     }
 }

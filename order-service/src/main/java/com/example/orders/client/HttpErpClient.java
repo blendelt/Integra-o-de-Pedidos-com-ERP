@@ -42,15 +42,15 @@ public class HttpErpClient implements ErpClient {
                     .body(ErpOrderResponse.class);
 
             validateResponse(order, response);
-            LOGGER.info("Order sent to ERP externalId={}", order.getExternalId());
+            LOGGER.info("ERP acceptance received id={}", order.getId());
             return response;
         } catch (RestClientResponseException exception) {
-            LOGGER.warn("ERP rejected order externalId={} status={}",
-                    order.getExternalId(), exception.getStatusCode().value());
+            LOGGER.warn("ERP rejected order id={} status={}",
+                    order.getId(), exception.getStatusCode().value());
             throw new ErpClientException(
                     ErpFailure.HTTP_ERROR, "ERP returned HTTP " + exception.getStatusCode().value(), exception);
         } catch (ResourceAccessException exception) {
-            LOGGER.warn("ERP unavailable for externalId={}", order.getExternalId());
+            LOGGER.warn("ERP unavailable for id={}", order.getId());
             ErpFailure failure = isTimeout(exception) ? ErpFailure.TIMEOUT : ErpFailure.UNAVAILABLE;
             throw new ErpClientException(failure, failure.safeMessage(), exception);
         } catch (RestClientException exception) {

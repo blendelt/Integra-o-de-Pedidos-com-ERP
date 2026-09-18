@@ -86,8 +86,8 @@ Detalhes e roteiro: `REPROCESSING.md`. A deduplicação do simulador é em memó
 
 - [x] Adicionar Flyway e criar a migração inicial da tabela `orders`
 - [x] Adicionar métodos de domínio para iniciar, concluir e falhar o processamento
-- [ ] Revisar respostas e códigos HTTP
-- [ ] Adicionar logs com identificador do pedido, sem registrar dados sensíveis
+- [x] Revisar respostas e códigos HTTP (400/404/409 padronizados; testes dos dois serviços aprovados em execução local, conforme confirmação do usuário)
+- [x] Adicionar logs com ID interno, status, tentativas e categoria de falha, sem payload ou externalId bruto
 - [x] Usar proxy Angular em desenvolvimento para acessar o Order Service
 
 Critério de conclusão:

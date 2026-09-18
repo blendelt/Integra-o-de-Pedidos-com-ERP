@@ -22,6 +22,7 @@ import java.util.List;
 
 @Service
 public class OrderService {
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
 
@@ -37,7 +38,9 @@ public class OrderService {
 
         try {
             Order order = new Order(request.externalId(), request.customerName(), request.totalValue());
-            return OrderResponse.from(orderRepository.saveAndFlush(order));
+            Order saved = orderRepository.saveAndFlush(order);
+            LOGGER.info("Order creation prepared id={} status={}", saved.getId(), saved.getStatus());
+            return OrderResponse.from(saved);
         } catch (DataIntegrityViolationException exception) {
             Throwable cause = exception;
             while (cause != null) {
@@ -84,6 +87,7 @@ public class OrderService {
             }
             throw exception;
         }
+        LOGGER.info("Order retry prepared id={} status={} attempts={}", order.getId(), order.getStatus(), order.getAttemptCount());
         return OrderResponse.from(order);
     }
 }
